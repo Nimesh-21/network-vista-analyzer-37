@@ -45,3 +45,9 @@ export interface DevicesState {
   isLoading: boolean;
   error: string | null;
 }
+
+// Type for storing data in localStorage
+export interface StoredDeviceData {
+  data: DeviceData[];
+  lastUpdated: string;
+}

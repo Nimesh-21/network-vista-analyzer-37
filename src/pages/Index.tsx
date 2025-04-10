@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import Dashboard from '@/components/Dashboard';
@@ -8,117 +8,36 @@ import Connections from '@/components/Connections';
 import Processes from '@/components/Processes';
 import Logs from '@/components/Logs';
 import DeviceSelector from '@/components/DeviceSelector';
-import { DeviceData, DevicesState } from '@/types/network';
+import { useDeviceData } from '@/hooks/useDeviceData';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-// Import sample data - in a real app, this would come from an API
-import sampleData from '@/data/sample-data';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { toast } = useToast();
+  const { 
+    devicesState, 
+    refreshDeviceData, 
+    processJsonlData, 
+    handleDeviceChange 
+  } = useDeviceData();
   
-  // State for device data and selection
-  const [devicesState, setDevicesState] = useState<DevicesState>({
-    devices: [],
-    selectedDeviceIndex: 0,
-    lastUpdated: new Date(),
-    isLoading: true,
-    error: null
-  });
-
+  const [jsonlInput, setJsonlInput] = useState('');
+  
   // Toggle sidebar
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Simulate loading data from an API with multiple devices
-  const fetchDevicesData = useCallback(async () => {
-    try {
-      setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      // In a real app, you would fetch data from your API here
-      // This simulation creates multiple devices with modified sample data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Generate sample data for multiple devices
-      const devicesData: DeviceData[] = Array.from({ length: 5 }).map((_, index) => {
-        const clone = JSON.parse(JSON.stringify(sampleData));
-        
-        // Modify the hostname and some data to simulate different devices
-        if (index > 0) {
-          clone.hostname = `device-${index}-${Math.floor(Math.random() * 1000)}`;
-          // Modify some values to make each device unique
-          if (clone.per_ip_conn_count) {
-            const keys = Object.keys(clone.per_ip_conn_count);
-            if (keys.length > 0) {
-              const randomKey = keys[Math.floor(Math.random() * keys.length)];
-              clone.per_ip_conn_count[randomKey] = Math.floor(Math.random() * 10) + 1;
-            }
-          }
-        }
-        
-        return clone;
-      });
-      
-      setDevicesState(prev => ({
-        ...prev,
-        devices: devicesData,
-        lastUpdated: new Date(),
-        isLoading: false
-      }));
-      
-    } catch (error) {
-      console.error('Error fetching device data:', error);
-      setDevicesState(prev => ({
-        ...prev, 
-        isLoading: false, 
-        error: 'Failed to fetch device data. Please try again.'
-      }));
-      
-      toast({
-        title: "Error loading data",
-        description: "Could not fetch network data. Please try again.",
-        variant: "destructive",
-      });
+  // Handle JSONL data submission
+  const handleJsonlSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (jsonlInput.trim()) {
+      processJsonlData(jsonlInput);
+      setJsonlInput('');
     }
-  }, [toast]);
-
-  // Initial data load
-  useEffect(() => {
-    fetchDevicesData();
-  }, [fetchDevicesData]);
-
-  // Set up auto-refresh every minute
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      fetchDevicesData();
-      toast({
-        description: "Network data updated",
-        duration: 2000,
-      });
-    }, 60000); // Refresh every 60 seconds (1 minute)
-    
-    return () => clearInterval(refreshInterval);
-  }, [fetchDevicesData, toast]);
-
-  // Handle device selection
-  const handleDeviceChange = (index: number) => {
-    setDevicesState(prev => ({
-      ...prev,
-      selectedDeviceIndex: index
-    }));
-  };
-
-  // Handle manual refresh
-  const handleRefresh = () => {
-    fetchDevicesData();
-    toast({
-      description: "Refreshing network data...",
-      duration: 2000,
-    });
   };
 
   // Get the current selected device
@@ -147,7 +66,7 @@ export default function Index() {
             <h3 className="text-xl font-semibold mb-2">Data Error</h3>
             <p className="text-muted-foreground mb-4">{devicesState.error}</p>
             <button 
-              onClick={handleRefresh}
+              onClick={refreshDeviceData}
               className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md"
             >
               Try Again
@@ -178,19 +97,87 @@ export default function Index() {
         return <Processes data={selectedDevice} />;
       case 'logs':
         return <Logs data={selectedDevice} />;
-      case 'statistics':
-      case 'system':
-      case 'terminal':
+      case 'jsonl-input':
         return (
-          <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
-            <div className="flex flex-col items-center text-center max-w-md">
-              <div className="bg-muted/30 p-6 rounded-full mb-4">
-                <Loader2 className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
-              <p className="text-muted-foreground">This feature is being developed and will be available in the next update.</p>
-            </div>
-          </div>
+          <Card className="network-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Submit JSONL Device Data</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleJsonlSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Paste JSONL data below. Each line should contain a complete JSON object for a device.
+                    New data will update existing devices with the same hostname or add new devices.
+                  </p>
+                  <textarea
+                    className="w-full h-64 p-3 border border-border rounded-md bg-muted/30 font-mono text-sm"
+                    value={jsonlInput}
+                    onChange={(e) => setJsonlInput(e.target.value)}
+                    placeholder='{"hostname": "device-1", "timestamp": "2025-04-09T06:39:28Z", ...}'
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md"
+                >
+                  Process Data
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        );
+      case 'devices':
+        return (
+          <Card className="network-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">All Devices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Hostname</TableHead>
+                    <TableHead>Last Update</TableHead>
+                    <TableHead>IP Address</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {devicesState.devices.map((device, index) => {
+                    const ipAddress = device.network_config?.interfaces
+                      .split('\n')
+                      .filter(line => line.includes('inet ') && !line.includes('127.0.0.1'))
+                      .map(line => {
+                        const match = line.match(/inet\s+([0-9.]+)/);
+                        return match ? match[1] : 'Unknown';
+                      })[0] || 'Unknown';
+                    
+                    const isSelected = index === devicesState.selectedDeviceIndex;
+                    
+                    return (
+                      <TableRow 
+                        key={index}
+                        className={`cursor-pointer ${isSelected ? 'bg-primary/10' : ''}`}
+                        onClick={() => handleDeviceChange(index)}
+                      >
+                        <TableCell className="font-medium">{device.hostname}</TableCell>
+                        <TableCell>
+                          {new Date(device.timestamp).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="font-mono">{ipAddress}</TableCell>
+                        <TableCell>
+                          <span className="text-xs bg-netblue-500/20 text-netblue-400 px-2 py-0.5 rounded-full">
+                            Online
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         );
       default:
         return <Dashboard data={selectedDevice} />;
@@ -219,7 +206,7 @@ export default function Index() {
               devices={devicesState.devices}
               selectedDeviceIndex={devicesState.selectedDeviceIndex}
               onDeviceChange={handleDeviceChange}
-              onRefresh={handleRefresh}
+              onRefresh={refreshDeviceData}
               lastUpdated={devicesState.lastUpdated}
             />
           )}
