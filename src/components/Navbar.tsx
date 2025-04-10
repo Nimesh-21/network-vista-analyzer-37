@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 interface NavbarProps {
   hostname: string;
   toggleSidebar: () => void;
+  deviceCount?: number;
 }
 
-export default function Navbar({ hostname, toggleSidebar }: NavbarProps) {
+export default function Navbar({ hostname, toggleSidebar, deviceCount = 1 }: NavbarProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   
   useEffect(() => {
@@ -41,6 +42,11 @@ export default function Navbar({ hostname, toggleSidebar }: NavbarProps) {
           <Activity className="h-5 w-5 text-netblue-400 animate-pulse-slow" />
           <span className="hidden md:inline text-muted-foreground text-sm">System: </span>
           <span className="font-semibold text-sm truncate max-w-[150px] md:max-w-xs">{hostname}</span>
+          {deviceCount > 1 && (
+            <span className="text-xs bg-netblue-500/20 text-netblue-400 px-2 py-0.5 rounded-full">
+              {deviceCount} devices
+            </span>
+          )}
         </div>
         <div className="text-sm text-muted-foreground hidden md:block">
           {currentTime.toLocaleString()}

@@ -35,3 +35,13 @@ export interface NetworkData {
   namespaces?: Record<string, any>;
   received_at?: string;
 }
+
+export type DeviceData = NetworkData;
+
+export interface DevicesState {
+  devices: DeviceData[];
+  selectedDeviceIndex: number;
+  lastUpdated: Date;
+  isLoading: boolean;
+  error: string | null;
+}
