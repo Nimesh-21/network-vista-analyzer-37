@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,32 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom colors for our network dashboard
+				netblue: {
+					50: '#f0f5ff',
+					100: '#e0ebff',
+					200: '#c2d8ff',
+					300: '#9abbff',
+					400: '#6a95ff',
+					500: '#4f6df3',
+					600: '#3a4fe0',
+					700: '#2d3dc2',
+					800: '#2a359e',
+					900: '#29337e',
+				},
+				netteal: {
+					50: '#f0fdfd',
+					100: '#ccf8f8',
+					200: '#99eff0',
+					300: '#66dfe1',
+					400: '#39c6ca',
+					500: '#21aab0',
+					600: '#188a92',
+					700: '#166e76',
+					800: '#155a61',
+					900: '#164a50',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +110,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-slow': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.7' },
+				},
+				'data-flow': {
+					'0%': { transform: 'translateX(0)' },
+					'100%': { transform: 'translateX(100%)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-slow': 'pulse-slow 3s infinite',
+				'data-flow': 'data-flow 4s infinite linear'
 			}
 		}
 	},
