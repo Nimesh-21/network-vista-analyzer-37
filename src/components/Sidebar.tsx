@@ -1,7 +1,6 @@
-
 import { LayoutDashboard, NetworkIcon, Layers, CpuIcon, ScrollText, HardDrive, BrainCircuit, Terminal, Menu, X, Database, Upload } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,7 +10,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab, isOpen, toggleSidebar }: SidebarProps) {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
