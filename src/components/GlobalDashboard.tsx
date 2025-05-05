@@ -46,8 +46,8 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
     
     return devices.map(device => ({
       name: device.hostname.split('-')[0], // First part of hostname for brevity
-      received: Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_recv_total, 0) / (1024 * 1024), // MB
-      sent: Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_sent_total, 0) / (1024 * 1024) // MB
+      received: Object.values(device.interface_io || {}).reduce((sum, io) => sum + io.bytes_recv_total, 0) / (1024 * 1024), // MB
+      sent: Object.values(device.interface_io || {}).reduce((sum, io) => sum + io.bytes_sent_total, 0) / (1024 * 1024) // MB
     }));
   };
   
