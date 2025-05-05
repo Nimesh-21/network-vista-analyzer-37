@@ -1,4 +1,3 @@
-
 export interface NetworkData {
   hostname: string;
   timestamp: string;
@@ -127,6 +126,16 @@ export interface Alert {
   };
 }
 
+export interface DeviceStatusSummary {
+  hostname: string;
+  status: 'active' | 'inactive';
+  ip: string;
+  bytesReceived: number;
+  bytesSent: number;
+  connections: number;
+  lastUpdated: string;
+}
+
 export interface GlobalStats {
   totalDevices: number;
   activeDevices: number;
@@ -140,13 +149,12 @@ export interface GlobalStats {
   averageLatency: string;
   totalPorts: number;
   totalInterfaces: number;
-  deviceStatusSummary: {
-    hostname: string;
-    status: 'active' | 'inactive';
-    ip: string;
-    bytesReceived: number;
-    bytesSent: number;
-    connections: number;
-    lastUpdated: string;
-  }[];
+  deviceStatusSummary: DeviceStatusSummary[];
+  ipTrafficData: {
+    [ip: string]: {
+      connections: number;
+      bytesReceived?: number;
+      bytesSent?: number;
+    }
+  };
 }

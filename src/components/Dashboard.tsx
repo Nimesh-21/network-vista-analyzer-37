@@ -3,12 +3,13 @@ import { AlertCircle, HardDrive, Network, Wifi, ArrowDownRight, ArrowUpRight } f
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend
 } from 'recharts';
 import { NetworkData } from '@/types/network';
 
@@ -125,20 +126,10 @@ export default function Dashboard({ data }: DashboardProps) {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
+              <LineChart
                 data={trafficData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
-                <defs>
-                  <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f6df3" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#4f6df3" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#21aab0" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#21aab0" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
                 <XAxis dataKey="time" stroke="#718096" />
                 <YAxis stroke="#718096" />
@@ -149,21 +140,23 @@ export default function Dashboard({ data }: DashboardProps) {
                     color: '#e2e8f0'
                   }}
                 />
-                <Area
+                <Legend />
+                <Line
                   type="monotone"
                   dataKey="received"
+                  name="Received"
                   stroke="#4f6df3"
-                  fillOpacity={1}
-                  fill="url(#colorReceived)"
+                  strokeWidth={2}
+                  activeDot={{ r: 8 }}
                 />
-                <Area
+                <Line
                   type="monotone"
                   dataKey="sent"
+                  name="Sent" 
                   stroke="#21aab0"
-                  fillOpacity={1}
-                  fill="url(#colorSent)"
+                  strokeWidth={2}
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

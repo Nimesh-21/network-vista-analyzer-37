@@ -32,11 +32,25 @@ export default function Index() {
   } = useDeviceData();
   
   const [jsonlInput, setJsonlInput] = useState('');
+
+  // Check URL hash for direct navigation
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['dashboard', 'alerts', 'interfaces', 'connections', 'processes', 'logs', 'devices', 
+                'jsonl-input', 'statistics', 'system', 'terminal'].includes(hash)) {
+      setActiveTab(hash);
+    }
+  }, []);
   
   // Toggle sidebar
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Update URL hash when active tab changes
+  useEffect(() => {
+    window.location.hash = activeTab;
+  }, [activeTab]);
 
   // Handle JSONL data submission
   const handleJsonlSubmit = (e: React.FormEvent) => {
@@ -99,7 +113,7 @@ export default function Index() {
       );
     }
 
-    if (!selectedDevice && activeTab !== 'dashboard' && activeTab !== 'alerts' && activeTab !== 'jsonl-input') {
+    if (!selectedDevice && !['dashboard', 'alerts', 'devices', 'jsonl-input'].includes(activeTab)) {
       return (
         <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
           <div className="flex flex-col items-center text-center max-w-md">
@@ -115,6 +129,8 @@ export default function Index() {
           devices={devicesState.devices} 
           onSelectDevice={handleDeviceChange} 
         />;
+      case 'alerts':
+        return <Alerts />;
       case 'interfaces':
         return <NetworkInterfaces data={selectedDevice} />;
       case 'connections':
@@ -153,7 +169,7 @@ export default function Index() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Connections</p>
-                          <p className="text-sm">{Object.values(device.per_ip_conn_count).reduce((a, b) => a + b, 0)}</p>
+                          <p className="text-sm">{Object.values(device.per_ip_conn_count || {}).reduce((a, b) => a + b, 0)}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -196,12 +212,15 @@ export default function Index() {
         );
       case 'statistics':
         return <NetflowVisualizer data={selectedDevice} />;
-      case 'alerts':
-        return <Alerts />;
       case 'system':
         return <SystemInfo data={selectedDevice} />;
-      default:
+      case 'terminal':
         return <Dashboard data={selectedDevice} />;
+      default:
+        return <GlobalDashboard 
+          devices={devicesState.devices} 
+          onSelectDevice={handleDeviceChange} 
+        />;
     }
   };
 

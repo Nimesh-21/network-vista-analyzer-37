@@ -1,4 +1,5 @@
-import { LayoutDashboard, NetworkIcon, Layers, CpuIcon, ScrollText, HardDrive, BrainCircuit, Terminal, Menu, X, Database, Upload } from 'lucide-react';
+
+import { LayoutDashboard, NetworkIcon, Layers, CpuIcon, ScrollText, HardDrive, BrainCircuit, Terminal, Menu, X, Database, Upload, AlertCircle } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -14,6 +15,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, toggleSidebar
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { id: 'alerts', label: 'Alerts', icon: <AlertCircle className="h-5 w-5" /> },
     { id: 'interfaces', label: 'Network Interfaces', icon: <NetworkIcon className="h-5 w-5" /> },
     { id: 'connections', label: 'Connections', icon: <Layers className="h-5 w-5" /> },
     { id: 'processes', label: 'Processes', icon: <CpuIcon className="h-5 w-5" /> },

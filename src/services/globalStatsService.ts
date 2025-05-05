@@ -17,7 +17,8 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     averageLatency: 'N/A',
     totalPorts: 0,
     totalInterfaces: 0,
-    deviceStatusSummary: []
+    deviceStatusSummary: [],
+    ipTrafficData: {}
   };
   
   // Return empty stats if no devices
@@ -90,6 +91,20 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
       if (pingMatch && pingMatch[1]) {
         latencyValues.push(parseFloat(pingMatch[1]));
       }
+    }
+
+    // Process IP-wise traffic data
+    if (perIpConnCount && Object.keys(perIpConnCount).length > 0) {
+      Object.entries(perIpConnCount).forEach(([ip, count]) => {
+        if (!stats.ipTrafficData[ip]) {
+          stats.ipTrafficData[ip] = {
+            connections: 0,
+            bytesReceived: 0,
+            bytesSent: 0
+          };
+        }
+        stats.ipTrafficData[ip].connections += count;
+      });
     }
   });
   
