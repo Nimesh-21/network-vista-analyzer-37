@@ -100,4 +100,44 @@
   .data-flow-pulse {
     @apply absolute h-full w-1/4 bg-gradient-to-r from-transparent via-netteal-300 to-transparent animate-data-flow;
   }
+
+  .status-active {
+    @apply bg-netteal-500 text-white;
+  }
+
+  .status-inactive {
+    @apply bg-gray-500 text-white;
+  }
+
+  .status-warning {
+    @apply bg-yellow-500 text-white;
+  }
+
+  .status-critical {
+    @apply bg-destructive text-white;
+  }
+
+  .device-card {
+    @apply network-card transition-all hover:border-netblue-400/50 hover:shadow-lg hover:shadow-netblue-500/10 cursor-pointer;
+  }
+
+  .device-card-selected {
+    @apply network-card border-netblue-400 shadow-lg shadow-netblue-500/20;
+  }
+  
+  .alert-low {
+    @apply border-l-4 border-netteal-500;
+  }
+  
+  .alert-medium {
+    @apply border-l-4 border-yellow-500;
+  }
+  
+  .alert-high {
+    @apply border-l-4 border-orange-500;
+  }
+  
+  .alert-critical {
+    @apply border-l-4 border-destructive;
+  }
 }
