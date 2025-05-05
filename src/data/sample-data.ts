@@ -39,7 +39,6 @@ const sampleData = {
     dns_example_com: ";; Query time: 30 msec\n;; SERVER: 8.8.8.8#53(8.8.8.8)\n;; WHEN: Thu Apr 17 12:00:00 EDT 2023\n;; MSG SIZE  rcvd: 56"
   },
   logs: "May  1 12:00:01 sample-device-1 sshd[12345]: Accepted publickey for user from 192.168.1.101 port 54321\nMay  1 12:00:05 sample-device-1 kernel: [12345.678901] TCP: request_sock_TCP: Possible SYN flooding on port 80. Sending cookies.\nMay  1 12:00:10 sample-device-1 systemd[1]: Started Daily apt download activities.",
-  // Adding the missing properties to match NetworkData type
   open_ports: [
     {
       port: 22,
@@ -79,6 +78,208 @@ const sampleData = {
       delta_recv: 2000
     }
   },
+  per_ip_traffic: {
+    "151.101.192.223": {
+      bytes: 22324,
+      packets: 41
+    },
+    "151.101.64.223": {
+      bytes: 26524,
+      packets: 51
+    },
+    "151.101.0.223": {
+      bytes: 5346,
+      packets: 11
+    },
+    "142.250.72.174": {
+      bytes: 45678,
+      packets: 89
+    },
+    "192.168.1.1": {
+      bytes: 15789,
+      packets: 123
+    },
+    "8.8.8.8": {
+      bytes: 5280,
+      packets: 48
+    },
+    "192.168.1.25": {
+      bytes: 37860,
+      packets: 412
+    },
+    "172.217.22.14": {
+      bytes: 18456,
+      packets: 98
+    },
+    "198.51.100.23": {
+      bytes: 7892,
+      packets: 63
+    },
+    "203.0.113.42": {
+      bytes: 12540,
+      packets: 105
+    },
+    "198.51.100.127": {
+      bytes: 5670,
+      packets: 39
+    },
+    "203.0.113.10": {
+      bytes: 9820,
+      packets: 74
+    }
+  },
+  netflow_last_5min: [
+    {
+      type: "FLOW",
+      sampled: 1,
+      export_sysid: 12345,
+      first: "2025-05-01T11:55:10Z",
+      last: "2025-05-01T11:57:22Z",
+      received: "2025-05-01T11:58:00Z",
+      in_packets: 342,
+      in_bytes: 45678,
+      proto: 6,
+      tcp_flags: "SYN ACK",
+      src_port: 48524,
+      dst_port: 443,
+      src_tos: 0,
+      src4_addr: "192.168.1.100",
+      dst4_addr: "142.250.72.174",
+      src_geo: "US",
+      dst_geo: "US",
+      input_snmp: 2,
+      output_snmp: 1,
+      src_mask: 24,
+      dst_mask: 24,
+      src_net: "192.168.1.0/24",
+      dst_net: "142.250.72.0/24",
+      fwd_status: 0,
+      direction: 0,
+      dst_tos: 0,
+      ip4_router: "192.168.1.1",
+      label: "https-traffic"
+    },
+    {
+      type: "FLOW",
+      sampled: 1,
+      export_sysid: 12345,
+      first: "2025-05-01T11:56:15Z",
+      last: "2025-05-01T11:57:45Z",
+      received: "2025-05-01T11:58:30Z",
+      in_packets: 128,
+      in_bytes: 26524,
+      proto: 6,
+      tcp_flags: "SYN ACK FIN",
+      src_port: 48526,
+      dst_port: 80,
+      src_tos: 0,
+      src4_addr: "192.168.1.100",
+      dst4_addr: "151.101.64.223",
+      src_geo: "US",
+      dst_geo: "US",
+      input_snmp: 2,
+      output_snmp: 1,
+      src_mask: 24,
+      dst_mask: 24,
+      src_net: "192.168.1.0/24",
+      dst_net: "151.101.64.0/24",
+      fwd_status: 0,
+      direction: 0,
+      dst_tos: 0,
+      ip4_router: "192.168.1.1",
+      label: "http-traffic"
+    },
+    {
+      type: "FLOW",
+      sampled: 1,
+      export_sysid: 12345,
+      first: "2025-05-01T11:54:22Z",
+      last: "2025-05-01T11:56:10Z",
+      received: "2025-05-01T11:58:15Z",
+      in_packets: 68,
+      in_bytes: 5346,
+      proto: 17,
+      tcp_flags: "",
+      src_port: 53124,
+      dst_port: 53,
+      src_tos: 0,
+      src4_addr: "192.168.1.100",
+      dst4_addr: "8.8.8.8",
+      src_geo: "US",
+      dst_geo: "US",
+      input_snmp: 2,
+      output_snmp: 1,
+      src_mask: 24,
+      dst_mask: 32,
+      src_net: "192.168.1.0/24",
+      dst_net: "8.8.8.8/32",
+      fwd_status: 0,
+      direction: 0,
+      dst_tos: 0,
+      ip4_router: "192.168.1.1",
+      label: "dns-traffic"
+    },
+    {
+      type: "FLOW",
+      sampled: 1,
+      export_sysid: 12345,
+      first: "2025-05-01T11:55:30Z",
+      last: "2025-05-01T11:58:45Z",
+      received: "2025-05-01T11:59:00Z",
+      in_packets: 256,
+      in_bytes: 18456,
+      proto: 6,
+      tcp_flags: "SYN ACK RST",
+      src_port: 49120,
+      dst_port: 22,
+      src_tos: 0,
+      src4_addr: "198.51.100.23",
+      dst4_addr: "192.168.1.100",
+      src_geo: "UK",
+      dst_geo: "US",
+      input_snmp: 1,
+      output_snmp: 2,
+      src_mask: 24,
+      dst_mask: 24,
+      src_net: "198.51.100.0/24",
+      dst_net: "192.168.1.0/24",
+      fwd_status: 0,
+      direction: 1,
+      dst_tos: 0,
+      ip4_router: "192.168.1.1",
+      label: "ssh-traffic"
+    },
+    {
+      type: "FLOW",
+      sampled: 1,
+      export_sysid: 12345,
+      first: "2025-05-01T11:57:10Z",
+      last: "2025-05-01T11:59:32Z",
+      received: "2025-05-01T11:59:45Z",
+      in_packets: 184,
+      in_bytes: 12540,
+      proto: 6,
+      tcp_flags: "SYN ACK PSH",
+      src_port: 32451,
+      dst_port: 3389,
+      src_tos: 0,
+      src4_addr: "203.0.113.42",
+      dst4_addr: "192.168.1.100",
+      src_geo: "CA",
+      dst_geo: "US",
+      input_snmp: 1,
+      output_snmp: 2,
+      src_mask: 24,
+      dst_mask: 24,
+      src_net: "203.0.113.0/24",
+      dst_net: "192.168.1.0/24",
+      fwd_status: 0,
+      direction: 1,
+      dst_tos: 0,
+      ip4_router: "192.168.1.1",
+      label: "rdp-traffic"
+    }
+  ],
   received_at: "2025-05-01T12:00:00Z"
 };
 

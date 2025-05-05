@@ -1,3 +1,4 @@
+
 export interface NetworkData {
   hostname: string;
   timestamp: string;
@@ -136,6 +137,24 @@ export interface DeviceStatusSummary {
   lastUpdated: string;
 }
 
+export interface TcpFlagDistribution {
+  SYN: number;
+  ACK: number;
+  PSH: number;
+  RST: number;
+  FIN: number;
+  URG: number;
+  ECE: number;
+  CWR: number;
+}
+
+export interface DestinationPortCount {
+  port: number;
+  protocol: number;
+  count: number;
+  service: string;
+}
+
 export interface GlobalStats {
   totalDevices: number;
   activeDevices: number;
@@ -157,4 +176,22 @@ export interface GlobalStats {
       bytesSent?: number;
     }
   };
+  topIpsByTraffic: {
+    ip: string;
+    bytes: number;
+    packets: number;
+  }[];
+  tcpFlagDistribution: TcpFlagDistribution;
+  topFlows: Array<{
+    src: string;
+    dst: string;
+    srcPort: number;
+    dstPort: number;
+    proto: number;
+    bytes: number;
+    packets: number;
+    duration: number;
+    tcpFlags: string;
+  }>;
+  commonDestPorts: DestinationPortCount[];
 }

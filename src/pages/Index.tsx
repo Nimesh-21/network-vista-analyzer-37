@@ -12,12 +12,13 @@ import SystemInfo from '@/components/SystemInfo';
 import GlobalDashboard from '@/components/GlobalDashboard';
 import Alerts from '@/components/Alerts';
 import DeviceSelector from '@/components/DeviceSelector';
+import NetworkTrafficAnalysis from '@/components/NetworkTrafficAnalysis';
 import { useDeviceData } from '@/hooks/useDeviceData';
+import { calculateGlobalStats } from '@/services/globalStatsService';
 import { Loader2, AlertCircle, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { isDeviceActive } from '@/services/deviceDataService';
 
@@ -36,8 +37,9 @@ export default function Index() {
   // Check URL hash for direct navigation
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['dashboard', 'alerts', 'interfaces', 'connections', 'processes', 'logs', 'devices', 
-                'jsonl-input', 'statistics', 'system', 'terminal'].includes(hash)) {
+    if (hash && ['dashboard', 'alerts', 'traffic-analysis', 'interfaces', 'connections', 
+                'processes', 'logs', 'devices', 'jsonl-input', 'statistics', 'system', 
+                'terminal'].includes(hash)) {
       setActiveTab(hash);
     }
   }, []);
@@ -80,6 +82,18 @@ export default function Index() {
   
   // Check if the selected device is active
   const isSelectedDeviceActive = selectedDevice ? isDeviceActive(selectedDevice.received_at) : false;
+  
+  // Calculate global stats for traffic analysis
+  const globalStats = devicesState.devices.length > 0 ? calculateGlobalStats(devicesState.devices) : null;
+
+  // Set up auto-refresh every minute
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      refreshDeviceData();
+    }, 60000); // Refresh every minute
+    
+    return () => clearInterval(refreshInterval);
+  }, [refreshDeviceData]);
 
   // Render appropriate component based on active tab
   const renderComponent = () => {
@@ -113,7 +127,7 @@ export default function Index() {
       );
     }
 
-    if (!selectedDevice && !['dashboard', 'alerts', 'devices', 'jsonl-input'].includes(activeTab)) {
+    if (!selectedDevice && !['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab)) {
       return (
         <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
           <div className="flex flex-col items-center text-center max-w-md">
@@ -131,6 +145,15 @@ export default function Index() {
         />;
       case 'alerts':
         return <Alerts />;
+      case 'traffic-analysis':
+        return globalStats ? <NetworkTrafficAnalysis stats={globalStats} /> : (
+          <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground">Analyzing traffic data...</p>
+            </div>
+          </div>
+        );
       case 'interfaces':
         return <NetworkInterfaces data={selectedDevice} />;
       case 'connections':
@@ -246,7 +269,7 @@ export default function Index() {
         {/* Content */}
         <div className="p-4">
           {/* Device selector (Show only on device-specific tabs) */}
-          {!['dashboard', 'alerts', 'devices', 'jsonl-input'].includes(activeTab) && (
+          {!['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab) && (
             <DeviceSelector
               devices={devicesState.devices}
               selectedDeviceIndex={devicesState.selectedDeviceIndex}
@@ -257,7 +280,7 @@ export default function Index() {
           )}
           
           {/* Status indicator for selected device */}
-          {!['dashboard', 'alerts', 'devices', 'jsonl-input'].includes(activeTab) && selectedDevice && (
+          {!['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab) && selectedDevice && (
             <div className={`mb-4 p-2 rounded flex items-center space-x-2 ${isSelectedDeviceActive ? 'bg-netteal-500/10' : 'bg-gray-500/10'}`}>
               <div className={`w-3 h-3 rounded-full ${isSelectedDeviceActive ? 'bg-netteal-500' : 'bg-gray-500'}`}></div>
               <span className="text-sm">
