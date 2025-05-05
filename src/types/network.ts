@@ -57,7 +57,7 @@ export interface NetworkData {
     in_packets: number;
     in_bytes: number;
     proto: number;
-    tcp_flags: string;
+    tcp_flags: string; // Can be "...AP.SF", "SYN ACK", etc.
     src_port: number;
     dst_port: number;
     src_tos: number;

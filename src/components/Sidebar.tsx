@@ -33,10 +33,19 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, toggleSidebar
     if (isMobile) {
       toggleSidebar();
     }
+    // Update URL hash when tab changes
+    window.location.hash = tabId;
   };
 
   if (!isOpen) {
-    return null;
+    return (
+      <button
+        className="fixed top-4 left-4 z-30 md:hidden"
+        onClick={toggleSidebar}
+      >
+        <Menu className="h-6 w-6 text-muted-foreground" />
+      </button>
+    );
   }
   
   return (

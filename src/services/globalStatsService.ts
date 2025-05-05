@@ -79,7 +79,7 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     stats.totalBytesSent += deviceBytesSent;
     
     // Count connections (approximate from per_ip_conn_count)
-    const deviceConnections = Object.values(perIpConnCount).reduce((sum, count) => sum + count, 0);
+    const deviceConnections = Object.values(perIpConnCount || {}).reduce((sum, count) => sum + count, 0);
     stats.totalConnections += deviceConnections;
     
     // Count TCP connections (from connections string - approximate)
@@ -109,7 +109,7 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     }
 
     // Process IP-wise traffic data
-    if (Object.keys(perIpConnCount).length > 0) {
+    if (perIpConnCount) {
       Object.entries(perIpConnCount).forEach(([ip, count]) => {
         if (!stats.ipTrafficData[ip]) {
           stats.ipTrafficData[ip] = {
@@ -123,7 +123,7 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     }
     
     // Process per_ip_traffic data
-    if (Object.keys(perIpTraffic).length > 0) {
+    if (perIpTraffic && Object.keys(perIpTraffic).length > 0) {
       // Add IP traffic data to topIpsByTraffic
       Object.entries(perIpTraffic).forEach(([ip, data]) => {
         // Add to ipTrafficData
@@ -153,14 +153,44 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     }
     
     // Process NetFlow data for TCP flags distribution
-    if (netflowData.length > 0) {
+    if (netflowData && netflowData.length > 0) {
       // Create a map of destination ports and their frequency
       const destPortCountMap: Map<number, { protocol: number; count: number }> = new Map();
       
       netflowData.forEach(flow => {
-        // TCP Flag distribution
+        // Parse TCP flags from the netflow data
         if (flow.proto === 6 && flow.tcp_flags) { // TCP protocol
-          const flags = flow.tcp_flags.split(' ');
+          // Different netflow exporters format flags differently
+          // Some use space-separated like "SYN ACK", others use characters like "...AP.SF"
+          // We'll handle both formats
+          
+          let flags: string[] = [];
+          
+          // Handle the character format like "...AP.SF"
+          if (flow.tcp_flags.includes('.')) {
+            const flagMap: Record<string, string> = {
+              'S': 'SYN',
+              'A': 'ACK',
+              'P': 'PSH',
+              'R': 'RST',
+              'F': 'FIN',
+              'U': 'URG',
+              'E': 'ECE',
+              'C': 'CWR'
+            };
+            
+            for (let i = 0; i < flow.tcp_flags.length; i++) {
+              const char = flow.tcp_flags[i];
+              if (char !== '.' && flagMap[char]) {
+                flags.push(flagMap[char]);
+              }
+            }
+          } else {
+            // Handle space-separated format like "SYN ACK"
+            flags = flow.tcp_flags.split(' ');
+          }
+          
+          // Increment the flag counters
           flags.forEach(flag => {
             if (flag === 'SYN') stats.tcpFlagDistribution.SYN++;
             if (flag === 'ACK') stats.tcpFlagDistribution.ACK++;
