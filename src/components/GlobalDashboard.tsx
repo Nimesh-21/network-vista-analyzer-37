@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Activity, Server, Database, Clock, ArrowDownRight, 
@@ -44,11 +43,15 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
   const prepareNetworkTrafficData = () => {
     if (!devices.length) return [];
     
-    return devices.map(device => ({
-      name: device.hostname.split('-')[0], // First part of hostname for brevity
-      received: Object.values(device.interface_io || {}).reduce((sum, io) => sum + io.bytes_recv_total, 0) / (1024 * 1024), // MB
-      sent: Object.values(device.interface_io || {}).reduce((sum, io) => sum + io.bytes_sent_total, 0) / (1024 * 1024) // MB
-    }));
+    return devices.map(device => {
+      const interfaceIO = device.interface_io || {};
+      
+      return {
+        name: device.hostname.split('-')[0], // First part of hostname for brevity
+        received: Object.values(interfaceIO).reduce((sum, io) => sum + io.bytes_recv_total, 0) / (1024 * 1024), // MB
+        sent: Object.values(interfaceIO).reduce((sum, io) => sum + io.bytes_sent_total, 0) / (1024 * 1024) // MB
+      };
+    });
   };
   
   const prepareProtocolDistributionData = () => {

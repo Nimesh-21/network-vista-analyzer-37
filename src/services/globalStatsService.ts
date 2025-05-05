@@ -30,6 +30,10 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
   
   // Process each device
   devices.forEach(device => {
+    // Ensure device properties exist before accessing them
+    const interfaceIO = device.interface_io || {};
+    const perIpConnCount = device.per_ip_conn_count || {};
+    
     // Determine device status
     const isActive = isDeviceActive(device.received_at);
     
@@ -39,42 +43,46 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
       stats.inactiveDevices++;
     }
     
+    // Calculate total bytes for this device safely
+    const deviceBytesReceived = Object.values(interfaceIO).reduce((sum, io) => sum + io.bytes_recv_total, 0);
+    const deviceBytesSent = Object.values(interfaceIO).reduce((sum, io) => sum + io.bytes_sent_total, 0);
+    
     // Add device to summary
     stats.deviceStatusSummary.push({
       hostname: device.hostname,
       status: isActive ? 'active' : 'inactive',
       ip: extractDeviceIp(device),
-      bytesReceived: Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_recv_total, 0),
-      bytesSent: Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_sent_total, 0),
-      connections: Object.values(device.per_ip_conn_count).reduce((sum, count) => sum + count, 0),
+      bytesReceived: deviceBytesReceived,
+      bytesSent: deviceBytesSent,
+      connections: Object.values(perIpConnCount).reduce((sum, count) => sum + count, 0),
       lastUpdated: device.received_at
     });
     
     // Aggregate bytes received/sent
-    stats.totalBytesReceived += Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_recv_total, 0);
-    stats.totalBytesSent += Object.values(device.interface_io).reduce((sum, io) => sum + io.bytes_sent_total, 0);
+    stats.totalBytesReceived += deviceBytesReceived;
+    stats.totalBytesSent += deviceBytesSent;
     
     // Count connections (approximate from per_ip_conn_count)
-    const deviceConnections = Object.values(device.per_ip_conn_count).reduce((sum, count) => sum + count, 0);
+    const deviceConnections = Object.values(perIpConnCount).reduce((sum, count) => sum + count, 0);
     stats.totalConnections += deviceConnections;
     
     // Count TCP connections (from connections string - approximate)
-    const tcpMatches = (device.connections.match(/tcp/g) || []).length;
+    const tcpMatches = (device.connections?.match(/tcp/g) || []).length;
     stats.tcpConnections += tcpMatches;
     
     // Count UDP connections (from connections string - approximate)
-    const udpMatches = (device.connections.match(/udp/g) || []).length;
+    const udpMatches = (device.connections?.match(/udp/g) || []).length;
     stats.udpConnections += udpMatches;
     
     // Count established connections (from connections string - approximate)
-    const estabMatches = (device.connections.match(/ESTAB/g) || []).length;
+    const estabMatches = (device.connections?.match(/ESTAB/g) || []).length;
     stats.establishedConnections += estabMatches;
     
     // Count open ports
     stats.totalPorts += device.open_ports?.length || 0;
     
     // Count interfaces (from ethtool)
-    stats.totalInterfaces += Object.keys(device.ethtool).length;
+    stats.totalInterfaces += Object.keys(device.ethtool || {}).length;
     
     // Extract and collect ping latency for averaging
     if (device.latency?.ping_gateway) {
