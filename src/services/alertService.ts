@@ -46,6 +46,13 @@ function generateDummyAlerts(count: number): Alert[] {
   for (let i = 0; i < count; i++) {
     const severity = severities[Math.floor(Math.random() * severities.length)];
     
+    // Format each part of the MAC address separately
+    const part1 = Math.floor(Math.random() * 100).toString(16).padStart(2, '0');
+    const part2 = Math.floor(Math.random() * 100).toString(16).padStart(2, '0');
+    const part3 = Math.floor(Math.random() * 100).toString(16).padStart(2, '0');
+    const part4 = Math.floor(Math.random() * 100).toString(16).padStart(2, '0');
+    const part5 = Math.floor(Math.random() * 100).toString(16).padStart(2, '0');
+    
     alerts.push({
       HEADER: {
         sourceId: Math.floor(Math.random() * 20) + 1,
@@ -71,7 +78,7 @@ function generateDummyAlerts(count: number): Alert[] {
         port: Math.floor(Math.random() * 65535),
         destinationIp: ipAddresses[Math.floor(Math.random() * ipAddresses.length)],
         deviceType: Math.floor(Math.random() * 3) + 1,
-        deviceMacId: `00:${Math.floor(Math.random() * 100):02x}:${Math.floor(Math.random() * 100):02x}:${Math.floor(Math.random() * 100):02x}:${Math.floor(Math.random() * 100):02x}:${Math.floor(Math.random() * 100):02x}`,
+        deviceMacId: `00:${part1}:${part2}:${part3}:${part4}:${part5}`,
         deviceIp: ipAddresses[Math.floor(Math.random() * ipAddresses.length)],
         logText: severity > 8 
           ? `attacker_ip:${ipAddresses[Math.floor(Math.random() * ipAddresses.length)]}:scan_type:Clustering:detect_type:Clustering:malicious:1` 
