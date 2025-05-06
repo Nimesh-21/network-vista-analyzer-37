@@ -8,8 +8,8 @@ import {
 } from '@/services/deviceDataService';
 import { useToast } from '@/hooks/use-toast';
 
-// Import sample data - in a real app, this would come from an API
-import sampleData from '@/data/sample-data';
+// Import sample data from JSON file instead of TS file
+import sampleData from '@/data/sample-data.json';
 
 export const useDeviceData = () => {
   const { toast } = useToast();
@@ -43,7 +43,7 @@ export const useDeviceData = () => {
     try {
       setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // Convert sample data from new format (object with hostnames as keys)
+      // Convert sample data from the JSON format (object with hostnames as keys)
       // to array format for internal use
       const devicesData: DeviceData[] = Object.values(sampleData);
       
