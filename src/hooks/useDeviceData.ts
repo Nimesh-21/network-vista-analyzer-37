@@ -43,25 +43,9 @@ export const useDeviceData = () => {
     try {
       setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // Generate sample data for multiple devices
-      const devicesData: DeviceData[] = Array.from({ length: 5 }).map((_, index) => {
-        const clone = JSON.parse(JSON.stringify(sampleData));
-        
-        // Modify the hostname and some data to simulate different devices
-        if (index > 0) {
-          clone.hostname = `device-${index}-${Math.floor(Math.random() * 1000)}`;
-          // Modify some values to make each device unique
-          if (clone.per_ip_conn_count) {
-            const keys = Object.keys(clone.per_ip_conn_count);
-            if (keys.length > 0) {
-              const randomKey = keys[Math.floor(Math.random() * keys.length)];
-              clone.per_ip_conn_count[randomKey] = Math.floor(Math.random() * 10) + 1;
-            }
-          }
-        }
-        
-        return clone;
-      });
+      // Convert sample data from new format (object with hostnames as keys)
+      // to array format for internal use
+      const devicesData: DeviceData[] = Object.values(sampleData);
       
       // Store in localStorage
       updateDeviceData(devicesData);
@@ -88,7 +72,7 @@ export const useDeviceData = () => {
     try {
       setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // In a real app, you would fetch JSONL data from an API
+      // In a real app, you would fetch data from an API in the new format
       // For demo purposes, we'll just update timestamps and some random values
       const updatedDevices = devicesState.devices.map(device => {
         const clone = { ...device };
