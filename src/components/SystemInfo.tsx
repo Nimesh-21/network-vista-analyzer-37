@@ -246,7 +246,7 @@ export default function SystemInfo({ data }: SystemInfoProps) {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Interface I/O</h3>
               <div className="space-y-3">
-                {Object.entries(data.interface_io).map(([iface, io]) => (
+                {data.interface_io && Object.entries(data.interface_io || {}).map(([iface, io]) => (
                   <div key={iface} className="bg-muted/20 p-3 rounded-md">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">{iface}</span>
@@ -272,7 +272,7 @@ export default function SystemInfo({ data }: SystemInfoProps) {
         </Card>
       </div>
       
-      {data.per_ip_traffic && Object.keys(data.per_ip_traffic).length > 0 && (
+      {data.per_ip_traffic && Object.keys(data.per_ip_traffic || {}).length > 0 && (
         <Card className="network-card">
           <CardHeader>
             <CardTitle className="text-lg">IP Traffic Analysis</CardTitle>
@@ -282,7 +282,7 @@ export default function SystemInfo({ data }: SystemInfoProps) {
               <div>
                 <h3 className="text-sm font-medium mb-3">Top Traffic by IP</h3>
                 <div className="space-y-2">
-                  {Object.entries(data.per_ip_traffic)
+                  {data.per_ip_traffic && Object.entries(data.per_ip_traffic || {})
                     .sort((a, b) => b[1].bytes - a[1].bytes)
                     .slice(0, 5)
                     .map(([ip, stats]) => (
@@ -317,7 +317,7 @@ export default function SystemInfo({ data }: SystemInfoProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(data.per_ip_traffic).map(([ip, stats], idx) => (
+                        {data.per_ip_traffic && Object.entries(data.per_ip_traffic || {}).map(([ip, stats], idx) => (
                           <tr key={ip} className={idx % 2 === 0 ? 'bg-muted/20' : ''}>
                             <td className="py-1.5">{ip}</td>
                             <td className="text-right py-1.5">{stats.packets.toLocaleString()}</td>
