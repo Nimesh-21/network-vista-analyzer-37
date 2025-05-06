@@ -70,7 +70,7 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
       ip: extractDeviceIp(device),
       bytesReceived: deviceBytesReceived,
       bytesSent: deviceBytesSent,
-      connections: Object.values(perIpConnCount).reduce((sum, count) => sum + count, 0),
+      connections: Object.values(perIpConnCount || {}).reduce((sum, count) => sum + count, 0),
       lastUpdated: device.received_at
     });
     
