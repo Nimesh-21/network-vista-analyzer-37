@@ -61,7 +61,7 @@ export default function Processes({ data }: ProcessesProps) {
           </CardContent>
         </Card>
         
-        {processStats.slice(0, 2).map((process, index) => (
+        {processStats.slice(0, 1).map((process, index) => (
           <Card key={index} className="network-card">
             <CardContent className="pt-6">
               <div className="flex justify-between items-center">
@@ -78,6 +78,25 @@ export default function Processes({ data }: ProcessesProps) {
             </CardContent>
           </Card>
         ))}
+        {processStats.slice(1, 2).map((process, index) => (
+          <Card key={index} className="network-card">
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center">
+                <div className="truncate pr-4">
+                  <p className="text-sm font-medium text-muted-foreground truncate">
+                    Second Most Active: {process.processName}
+                  </p>
+                  <p className="text-2xl font-bold">{process.connectionCount} conns</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-accent/50 flex items-center justify-center text-lg font-bold">
+                  {Math.round(process.percentage)}%
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        
       </div>
       
       <Card className="network-card">

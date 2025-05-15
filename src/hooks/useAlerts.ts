@@ -1,31 +1,31 @@
-
-import { useState, useEffect } from 'react';
-import { Alert } from '@/types/network';
+import { useState, useEffect, useCallback } from 'react';
+import type { Alert } from '@/types/network';
 import { fetchAlerts } from '@/services/alertService';
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const refreshAlerts = async () => {
+
+  const refreshAlerts = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchAlerts();
-      setAlerts(data);
-    } catch (err) {
+      // Use the service to fetch alerts
+      const fetched = await fetchAlerts();
+      setAlerts(fetched);
+    } catch (err: any) {
       console.error('Error fetching alerts:', err);
-      setError('Failed to fetch alerts. Please try again.');
+      setError(err.message || 'Failed to fetch alerts.');
     } finally {
       setIsLoading(false);
     }
-  };
-  
+  }, []);
+
   useEffect(() => {
     refreshAlerts();
-  }, []);
-  
+  }, [refreshAlerts]);
+
   return {
     alerts,
     isLoading,

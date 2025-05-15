@@ -1,10 +1,10 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { GlobalStats } from '@/types/network';
+import { GlobalStats, DeviceData } from '@/types/network';
+import { calculateGlobalStats } from '@/services/globalStatsService';
 import { formatBytes } from '@/services/deviceDataService';
 import {
   ResponsiveContainer,
@@ -34,48 +34,74 @@ const TCP_FLAG_COLORS = {
   ECE: '#8b5cf6',
   CWR: '#ec4899'
 };
+// Dynamic component using only /latest API
+export default function NetworkTrafficAnalysisDynamic() {
+  const [devices, setDevices] = useState<DeviceData[]>([]);
+  const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const getProtocolName = (proto: number): string => {
-  switch(proto) {
-    case 1: return 'ICMP';
-    case 6: return 'TCP';
-    case 17: return 'UDP';
-    default: return `Proto ${proto}`;
-  }
-};
-
-const NetworkTrafficAnalysis = ({ stats }: NetworkTrafficAnalysisProps) => {
-  // Prepare data for top IPs by traffic chart
-  const topIpsChartData = stats.topIpsByTraffic.slice(0, 10).map(item => ({
-    name: item.ip,
-    value: item.bytes,
-    formattedValue: formatBytes(item.bytes),
-    packets: item.packets
-  }));
-  
-  // Prepare data for TCP flag distribution chart
-  const tcpFlagData = Object.entries(stats.tcpFlagDistribution)
-    .filter(([_, value]) => value > 0)
-    .map(([flag, count]) => ({
-      name: flag,
-      value: count
-    }));
-  
-  // Prepare data for common destination ports chart
-  const destPortsData = stats.commonDestPorts.slice(0, 10).map(port => ({
-    name: `${port.service} (${port.port})`,
-    value: port.count,
-    port: port.port,
-    protocol: getProtocolName(port.protocol)
-  }));
-  
-  // Format duration in seconds to human-readable
-  const formatDuration = (seconds: number): string => {
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+  const fetchLatest = async () => {
+    try {
+      const res = await fetch('http://10.229.40.55:5000/latest');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const list = Object.values(data).map((host: any) => {
+        const m = host.network_config.interfaces.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+        const ip = m?.[1] ?? '—';
+        const bytesReceived = Object.values(host.interface_io).reduce(
+          (sum: number, io: any) => sum + (io.delta_recv || 0), 0);
+        const bytesSent = Object.values(host.interface_io).reduce(
+          (sum: number, io: any) => sum + (io.delta_sent || 0), 0);
+        return { ...host, ip, bytesReceived, bytesSent };
+      });
+      setDevices(list);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (devices.length) {
+      setStats(calculateGlobalStats(devices));
+    }
+  }, [devices]);
+
+  const getProtocolName = (proto: number) => {
+    switch (proto) {
+      case 1: return 'ICMP';
+      case 6: return 'TCP';
+      case 17: return 'UDP';
+      default: return `Proto ${proto}`;
+    }
+  };
+
+  const formatDuration = (sec: number) => {
+    if (sec < 60) return `${sec.toFixed(1)}s`;
+    const m = Math.floor(sec/60);
+    return `${m}m ${Math.round(sec%60)}s`;
+  };
+
+  if (loading) return <div className="text-center p-8">Loading…</div>;
+  if (error || !stats) return <div className="text-center p-8 text-destructive">Error: {error}</div>;
+
+  const topIpsChartData = stats.topIpsByTraffic.slice(0,10).map(i=>({ name: i.ip, value: i.bytes }));
+  const tcpFlagData = Object.entries(stats.tcpFlagDistribution)
+    .filter(([,c])=>c>0).map(([n,v])=>({ name: n, value: v }));
+    const destPortsData = stats.commonDestPorts.slice(0, 10).map(p => ({ 
+      name: p.service === 'unknown' ? `${p.port}` : `${p.service} (${p.port})`,
+      value: p.count
+    }));
 
   return (
     <div className="space-y-6">
@@ -308,4 +334,4 @@ const NetworkTrafficAnalysis = ({ stats }: NetworkTrafficAnalysisProps) => {
   );
 };
 
-export default NetworkTrafficAnalysis;
+// export default NetworkTrafficAnalysis;

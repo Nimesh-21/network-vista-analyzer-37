@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Activity, Server, Database, Clock, ArrowDownRight, 
@@ -12,6 +11,7 @@ import { calculateGlobalStats } from '@/services/globalStatsService';
 import { formatBytes, isDeviceActive } from '@/services/deviceDataService';
 import { useAlerts } from '@/hooks/useAlerts';
 import { formatAlertTimestamp, getSeverityLevel } from '@/services/alertService';
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -28,21 +28,109 @@ import {
   Cell
 } from 'recharts';
 
+interface HourlyTrafficDataPoint {
+  time: string;
+  received: number;
+  sent: number;
+}
+
 interface GlobalDashboardProps {
   devices: DeviceData[];
   onSelectDevice: (index: number) => void;
 }
 
-export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashboardProps) {
+export default function GlobalDashboard({ onSelectDevice }: GlobalDashboardProps) {
+  const [devices, setDevices] = useState<DeviceData[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const { alerts } = useAlerts();
   const [recentAlerts, setRecentAlerts] = useState<Alert[]>([]);
-  
-  // Calculate global statistics
+  const [hourlyNetworkTraffic, setHourlyNetworkTraffic] = useState<HourlyTrafficDataPoint[]>(
+    Array.from({ length: 12 }, (_, i) => {
+      const now = new Date();
+      const past = new Date(now.getTime() - (11 - i) * 60 * 60 * 1000);
+      const hours = past.getHours().toString().padStart(2, '0');
+      return { time: `${hours}:00`, received: 0, sent: 0 };
+    })
+  );
+  // Fetch device data
   useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const res = await fetch(`http://10.229.40.55:5000/latest`);
+        if (!res.ok) throw new Error(res.statusText);
+        const data = (await res.json()) as Record<string, any>;
+
+        const list: DeviceData[] = Object.values(data).map(host => {
+          const m = host.network_config.interfaces.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+          const ip = m ? m[1] : '—';
+          const bytesReceived = Object.values(host.interface_io)
+            .reduce((sum: number, io: any) => sum + (io.delta_recv || 0), 0);
+          const bytesSent = Object.values(host.interface_io)
+            .reduce((sum: number, io: any) => sum + (io.delta_sent || 0), 0);
+          const status = isDeviceActive(host.received_at) ? 'active' : 'inactive';
+        
+          return {
+            ...host,
+            ip,
+            bytesReceived,
+            bytesSent,
+            status,
+            lastUpdated: host.received_at,
+          };
+        });
+        
+
+        setDevices(list);
+        // Aggregate NetFlow data into hourly totals
+        const now = new Date();
+        const currentHour = now.getHours();
+        const updatedHourlyTraffic = [...hourlyNetworkTraffic];
+        const currentIndex = updatedHourlyTraffic.findIndex(item => parseInt(item.time.split(':')[0]) === currentHour);
+
+        let hourlyReceived = 0;
+        let hourlySent = 0;
+
+        list.forEach(device => {
+          if (device.netflow_last_5min) {
+            device.netflow_last_5min.forEach(flow => {
+              if (flow.direction === 0) {
+                hourlyReceived += flow.in_bytes || 0;
+              } else if (flow.direction === 1) {
+                hourlySent += flow.in_bytes || 0;
+              }
+            });
+          }
+        });
+
+        if (currentIndex !== -1) {
+          updatedHourlyTraffic[currentIndex] = {
+            time: updatedHourlyTraffic[currentIndex].time,
+            received: updatedHourlyTraffic[currentIndex].received + hourlyReceived,
+            sent: updatedHourlyTraffic[currentIndex].sent + hourlySent,
+          };
+          setHourlyNetworkTraffic(updatedHourlyTraffic);
+        } else {
+          // If the current hour isn't in our 12-hour window (shouldn't happen often),
+          // we can shift the array and add a new entry.
+          const newHourEntry = { time: `${currentHour.toString().padStart(2, '0')}:00`, received: hourlyReceived, sent: hourlySent };
+          const shiftedTraffic = [...updatedHourlyTraffic.slice(1), newHourEntry];
+          setHourlyNetworkTraffic(shiftedTraffic);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch devices:', err);
+      }
+    };
+
+    fetchDevices();
+    const interval = setInterval(fetchDevices, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+   // Calculate global stats when devices change
+   useEffect(() => {
     if (devices.length > 0) {
-      const calculatedStats = calculateGlobalStats(devices);
-      setStats(calculatedStats);
+      setStats(calculateGlobalStats(devices));
     }
   }, [devices]);
 
@@ -53,21 +141,25 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
       setRecentAlerts(alerts.slice(0, 3));
     }
   }, [alerts]);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+
+  const handleClick = () => {
+    const basePath = location.pathname;
+    navigate(`${basePath}#alerts`);
+    window.location.reload();
+  };
+
   
   // Generate data for traffic history chart
   const prepareNetworkTrafficData = () => {
-    // Generate time points for the last 12 hours (simulated data)
-    const timePoints = Array.from({ length: 12 }, (_, i) => {
-      const hour = new Date().getHours() - (11 - i);
-      return {
-        time: `${hour >= 0 ? hour : 24 + hour}:00`,
-        received: Math.floor(Math.random() * 100 + (i * 5)),
-        sent: Math.floor(Math.random() * 60 + (i * 3))
-      };
-    });
-    
-    // Calculate total received and sent data
-    return timePoints;
+    return hourlyNetworkTraffic.map(dataPoint => ({
+      ...dataPoint,
+      received: dataPoint.received / (1024 * 1024), // Convert to MB
+      sent: dataPoint.sent / (1024 * 1024),     // Convert to MB
+    }));
   };
   
   const prepareProtocolDistributionData = () => {
@@ -90,22 +182,16 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
   
   const prepareIPTrafficData = () => {
     if (!stats?.ipTrafficData) return [];
-    
     return Object.entries(stats.ipTrafficData)
-      .map(([ip, data]) => ({
-        ip,
-        connections: data.connections,
-      }))
+      .map(([ip, d]) => ({ ip, connections: d.connections }))
       .sort((a, b) => b.connections - a.connections)
-      .slice(0, 5); // Top 5 IPs by connections
+      .slice(0, 5);
   };
-  
+
   const networkTrafficData = prepareNetworkTrafficData();
   const protocolData = prepareProtocolDistributionData();
   const deviceStatusData = prepareDeviceStatusData();
   const ipTrafficData = prepareIPTrafficData();
-  
-  // Colors for charts
   const COLORS = ['#4f6df3', '#21aab0', '#ea5d2a', '#10b981'];
 
   if (!stats) {
@@ -118,17 +204,12 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
 
   const renderSeverityBadge = (severity: number) => {
     const level = getSeverityLevel(severity);
-    
-    if (level === 'low') {
-      return <Badge variant="outline" className="bg-netteal-500/10 text-netteal-400 border-netteal-500/20">Low</Badge>;
-    } else if (level === 'medium') {
-      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Medium</Badge>;
-    } else if (level === 'high') {
-      return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">High</Badge>;
-    } else {
-      return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Critical</Badge>;
-    }
+    if (level === 'low') return <Badge variant="outline" className="bg-netteal-500/10 text-netteal-400 border-netteal-500/20">Low</Badge>;
+    if (level === 'medium') return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Medium</Badge>;
+    if (level === 'high') return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">High</Badge>;
+    return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Critical</Badge>;
   };
+
 
   return (
     <div className="space-y-6">
@@ -261,7 +342,7 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
                       fill="#8884d8"
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}`}
                       labelLine={false}
                     >
                       {protocolData.map((entry, index) => (
@@ -293,7 +374,7 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
                       fill="#8884d8"
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({name}) => `${name=="Active" ? "On" : "Off"}`}
                       labelLine={false}
                     >
                       {deviceStatusData.map((entry, index) => (
@@ -339,45 +420,52 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
 
       {/* Top IP Traffic */}
       <Card className="network-card">
-        <CardHeader>
-          <CardTitle className="text-lg">Top IP Connections</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {ipTrafficData.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {ipTrafficData.map((item, index) => (
-                <Card key={item.ip} className="bg-muted/30">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm">{item.ip}</span>
-                        <Badge variant="outline" className="bg-netblue-500/10 text-netblue-400 border-netblue-500/20">
-                          #{index + 1}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground">Connections:</span>
-                        <span>{item.connections}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-4">
-              No IP traffic data available
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  <CardHeader>
+    <CardTitle className="text-lg">Top IP Connections</CardTitle>
+  </CardHeader>
+  <CardContent>
+    {ipTrafficData.filter(item => item.ip !== '[' && item.ip !== '127.0.0.1').length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {ipTrafficData
+          .filter(item => item.ip !== '[' && item.ip !== '127.0.0.1')
+          .map((item, index) => (
+            <Card key={item.ip} className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-sm">{item.ip}</span>
+                    <Badge
+                      variant="outline"
+                      className="bg-netblue-500/10 text-netblue-400 border-netblue-500/20"
+                    >
+                      #{index + 1}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Connections:</span>
+                    <span>{item.connections}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+      </div>
+    ) : (
+      <div className="text-center text-muted-foreground py-4">
+        No IP traffic data available
+      </div>
+    )}
+  </CardContent>
+</Card>
+
 
       {/* Recent Alerts */}
       <Card className="network-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Recent Alerts</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => window.location.hash = "#alerts"}>
-            View All Alerts
+          <Link to="/#alerts"></Link>
+          <Button variant="outline" size="sm" onClick={handleClick}>
+            Go to Alerts
           </Button>
         </CardHeader>
         <CardContent>
@@ -438,10 +526,11 @@ export default function GlobalDashboard({ devices, onSelectDevice }: GlobalDashb
                       <p className="text-sm">{formatBytes(device.bytesSent)}</p>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs pt-2">
-                    <span className="text-muted-foreground">Connections: {device.connections}</span>
-                    <span className="text-muted-foreground">{new Date(device.lastUpdated).toLocaleTimeString()}</span>
-                  </div>
+                  <div className="flex justify-between items-center text-xs pt-2 gap-4">
+  <span className="text-muted-foreground">Connections: {device.connections}</span>
+  <span className="text-muted-foreground">Time: {new Date(device.lastUpdated).toLocaleTimeString()}</span>
+</div>
+
                 </div>
                 <Shield className={`h-6 w-6 ${device.status === 'active' ? 'text-netteal-400' : 'text-gray-500'}`} />
               </div>

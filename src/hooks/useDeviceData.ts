@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { DeviceData, DevicesState } from '@/types/network';
 import { 
@@ -7,9 +6,6 @@ import {
   processIncomingJsonlData 
 } from '@/services/deviceDataService';
 import { useToast } from '@/hooks/use-toast';
-
-// Import sample data from JSON file instead of TS file
-import sampleData from '@/data/sample-data.json';
 
 export const useDeviceData = () => {
   const { toast } = useToast();
@@ -21,151 +17,86 @@ export const useDeviceData = () => {
     error: null
   });
 
-  // Load data from localStorage on initial load
-  useEffect(() => {
-    const { devices, lastUpdated } = retrieveDeviceData();
-    
-    if (devices.length > 0) {
+  // Fetch from API (and persist in localStorage) on mount
+  const loadFromApi = useCallback(async () => {
+    try {
+      setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
+      const res = await fetch('http://10.229.40.55:5000/latest');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as Record<string, DeviceData>;
+      const list = Object.values(data);
+      
+      updateDeviceData(list);
+      setDevicesState(prev => ({
+        ...prev,
+        devices: list,
+        lastUpdated: new Date(),
+        isLoading: false
+      }));
+    } catch (err: any) {
+      console.error('Error fetching device data:', err);
+      const { devices, lastUpdated } = retrieveDeviceData();
       setDevicesState(prev => ({
         ...prev,
         devices,
         lastUpdated,
-        isLoading: false
+        isLoading: false,
+        error: err.message
       }));
-    } else {
-      // If no data in storage, initialize with sample data
-      initializeWithSampleData();
+      toast({
+        title: 'Failed to load devices',
+        description: err.message,
+        variant: 'destructive',
+      });
     }
-  }, []);
+  }, [toast]);
 
-  // Initialize with sample data for demo purposes
-  const initializeWithSampleData = useCallback(() => {
-    try {
-      setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      // Convert sample data from the JSON format (object with hostnames as keys)
-      // to array format for internal use
-      const devicesData: DeviceData[] = Object.values(sampleData);
-      
-      // Store in localStorage
-      updateDeviceData(devicesData);
-      
-      setDevicesState(prev => ({
-        ...prev,
-        devices: devicesData,
-        lastUpdated: new Date(),
-        isLoading: false
-      }));
-      
-    } catch (error) {
-      console.error('Error initializing with sample data:', error);
-      setDevicesState(prev => ({
-        ...prev, 
-        isLoading: false, 
-        error: 'Failed to initialize data. Please try again.'
-      }));
-    }
-  }, []);
+  // On component mount, hit API
+  useEffect(() => {
+    loadFromApi();
+  }, [loadFromApi]);
 
   // Refresh device data
   const refreshDeviceData = useCallback(async () => {
-    try {
-      setDevicesState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      // In a real app, you would fetch data from an API in the new format
-      // For demo purposes, we'll just update timestamps and some random values
-      const updatedDevices = devicesState.devices.map(device => {
-        const clone = { ...device };
-        clone.timestamp = new Date().toISOString();
-        
-        // Update some random values to simulate changes
-        if (clone.per_ip_conn_count) {
-          const keys = Object.keys(clone.per_ip_conn_count);
-          if (keys.length > 0) {
-            const randomKey = keys[Math.floor(Math.random() * keys.length)];
-            clone.per_ip_conn_count[randomKey] = Math.floor(Math.random() * 10) + 1;
-          }
-        }
-        
-        return clone;
-      });
-      
-      // Store updated data
-      updateDeviceData(updatedDevices);
-      
-      setDevicesState(prev => ({
-        ...prev,
-        devices: updatedDevices,
-        lastUpdated: new Date(),
-        isLoading: false
-      }));
-      
-      toast({
-        description: "Network data updated",
-        duration: 2000,
-      });
-      
-    } catch (error) {
-      console.error('Error refreshing device data:', error);
-      setDevicesState(prev => ({
-        ...prev, 
-        isLoading: false, 
-        error: 'Failed to refresh data. Please try again.'
-      }));
-      
-      toast({
-        title: "Error updating data",
-        description: "Could not refresh network data. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [devicesState.devices, toast]);
+    await loadFromApi();
+    toast({
+      description: "Network data updated",
+      duration: 2000,
+    });
+  }, [loadFromApi, toast]);
 
   // Process incoming JSONL data
   const processJsonlData = useCallback((jsonlData: string) => {
     try {
       const updatedDevices = processIncomingJsonlData(jsonlData);
-      
+      updateDeviceData(updatedDevices);
       setDevicesState(prev => ({
         ...prev,
         devices: updatedDevices,
         lastUpdated: new Date(),
       }));
-      
-      toast({
-        description: "New network data received",
-        duration: 2000,
-      });
-      
+      toast({ description: "New network data received", duration: 2000 });
       return true;
     } catch (error) {
       console.error('Error processing JSONL data:', error);
-      
       toast({
         title: "Error processing data",
         description: "Could not process the received data. Please check format.",
         variant: "destructive",
       });
-      
       return false;
     }
   }, [toast]);
 
   // Change selected device
   const handleDeviceChange = useCallback((index: number) => {
-    setDevicesState(prev => ({
-      ...prev,
-      selectedDeviceIndex: index
-    }));
+    setDevicesState(prev => ({ ...prev, selectedDeviceIndex: index }));
   }, []);
 
-  // Set up auto-refresh
+  // Auto‐refresh every minute
   useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      refreshDeviceData();
-    }, 60000); // Refresh every 60 seconds (1 minute)
-    
-    return () => clearInterval(refreshInterval);
+    const id = setInterval(refreshDeviceData, 60_000);
+    return () => clearInterval(id);
   }, [refreshDeviceData]);
 
   return {

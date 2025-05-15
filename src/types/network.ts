@@ -195,3 +195,8 @@ export interface GlobalStats {
   }>;
   commonDestPorts: DestinationPortCount[];
 }
+export interface HourlyTrafficDataPoint {
+  time: string;
+  received: number; // bytes delta for the hour
+  sent: number;     // bytes delta for the hour
+}

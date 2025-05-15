@@ -78,21 +78,15 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     stats.totalBytesReceived += deviceBytesReceived;
     stats.totalBytesSent += deviceBytesSent;
     
-    // Count connections (approximate from per_ip_conn_count)
-    const deviceConnections = Object.values(perIpConnCount || {}).reduce((sum, count) => sum + count, 0);
-    stats.totalConnections += deviceConnections;
-    
-    // Count TCP connections (from connections string - approximate)
-    const tcpMatches = (device.connections?.match(/tcp/g) || []).length;
-    stats.tcpConnections += tcpMatches;
-    
-    // Count UDP connections (from connections string - approximate)
-    const udpMatches = (device.connections?.match(/udp/g) || []).length;
-    stats.udpConnections += udpMatches;
-    
-    // Count established connections (from connections string - approximate)
-    const estabMatches = (device.connections?.match(/ESTAB/g) || []).length;
+    const connsStr = device.connections || '';
+    // count every “tcp” or “udp” occurrence
+    const totalMatches = (connsStr.match(/tcp|udp/gi) || []).length;
+    const estabMatches = (connsStr.match(/ESTAB/g)    || []).length;
+
+    stats.totalConnections      += totalMatches;
     stats.establishedConnections += estabMatches;
+    stats.tcpConnections        += (connsStr.match(/tcp/gi) || []).length;
+    stats.udpConnections        += (connsStr.match(/udp/gi) || []).length;
     
     // Count open ports
     stats.totalPorts += device.open_ports?.length || 0;
@@ -102,11 +96,30 @@ export function calculateGlobalStats(devices: DeviceData[]): GlobalStats {
     
     // Extract and collect ping latency for averaging
     if (device.latency?.ping_gateway) {
-      const pingMatch = device.latency.ping_gateway.match(/avg\s*=\s*([0-9.]+)/);
-      if (pingMatch && pingMatch[1]) {
-        latencyValues.push(parseFloat(pingMatch[1]));
+      const pg = device.latency.ping_gateway;
+    
+      // Try your primary regex
+      let match = pg.match(/avg\s*=\s*([0-9.]+)/);
+      // If that fails, try the slash-delimited rtt format
+      if (!match) {
+        match = pg.match(/min\/avg\/max\/mdev\s*=\s*([0-9.]+)\/([0-9.]+)/);
+        // note: this one gives TWO groups, so take group[2]
+        if (match) {
+          latencyValues.push(parseFloat(match[2]));
+        }
+      } else {
+        latencyValues.push(parseFloat(match[1]));
+      }
+    
+      // As a last resort, grab any float in the string
+      if (!match) {
+        const fallback = pg.match(/([0-9]+\.[0-9]+)/);
+        if (fallback) {
+          latencyValues.push(parseFloat(fallback[1]));
+        }
       }
     }
+    
 
     // Process IP-wise traffic data
     if (perIpConnCount) {

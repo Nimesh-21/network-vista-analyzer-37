@@ -146,16 +146,17 @@ export default function Index() {
       case 'alerts':
         return <Alerts />;
       case 'traffic-analysis':
-        return globalStats ? <NetworkTrafficAnalysis stats={globalStats} /> : (
-          <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
-            <div className="flex flex-col items-center">
-              <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-              <p className="text-muted-foreground">Analyzing traffic data...</p>
-            </div>
-          </div>
-        );
+        return <NetworkTrafficAnalysis/>
       case 'interfaces':
-        return <NetworkInterfaces data={selectedDevice} />;
+        // return <NetworkInterfaces data={selectedDevice} />;
+        return selectedDevice ? (
+          <NetworkInterfaces 
+          data={selectedDevice} 
+          key={selectedDevice.hostname /* or selectedDeviceIndex */} 
+          />
+        ) : (
+          <div className="text-center p-8">No device selected</div>
+        );
       case 'connections':
         return <Connections data={selectedDevice} />;
       case 'processes':
@@ -261,9 +262,9 @@ export default function Index() {
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-60' : 'ml-0'}`}>
         {/* Navbar */}
         <Navbar 
-          hostname={selectedDevice?.hostname || 'Network Vista'} 
+          // hostname={selectedDevice?.hostname || 'Network Vista'} 
           toggleSidebar={toggleSidebar}
-          deviceCount={devicesState.devices.length}
+          // deviceCount={devicesState.devices.length}
         />
         
         {/* Content */}
@@ -271,23 +272,26 @@ export default function Index() {
           {/* Device selector (Show only on device-specific tabs) */}
           {!['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab) && (
             <DeviceSelector
-              devices={devicesState.devices}
-              selectedDeviceIndex={devicesState.selectedDeviceIndex}
-              onDeviceChange={handleDeviceChange}
-              onRefresh={refreshDeviceData}
-              lastUpdated={devicesState.lastUpdated}
-            />
-          )}
+            devices={devicesState.devices}
+            selectedIndex={devicesState.selectedDeviceIndex}
+            lastUpdated={devicesState.lastUpdated}
+            onDeviceChange={handleDeviceChange}
+            onRefresh={refreshDeviceData}
+            isLoading={devicesState.isLoading}
+            error={devicesState.error}
+          />
           
-          {/* Status indicator for selected device */}
-          {!['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab) && selectedDevice && (
-            <div className={`mb-4 p-2 rounded flex items-center space-x-2 ${isSelectedDeviceActive ? 'bg-netteal-500/10' : 'bg-gray-500/10'}`}>
-              <div className={`w-3 h-3 rounded-full ${isSelectedDeviceActive ? 'bg-netteal-500' : 'bg-gray-500'}`}></div>
-              <span className="text-sm">
-                {isSelectedDeviceActive ? 'This device is active' : 'This device has been inactive for more than 15 minutes'}
-              </span>
-            </div>
-          )}
+            )}
+            {/* Status indicator for selected device */}
+            {!['dashboard', 'alerts', 'traffic-analysis', 'devices', 'jsonl-input'].includes(activeTab) && selectedDevice && (
+              <div className={`mb-4 p-2 rounded flex items-center space-x-2 ${isSelectedDeviceActive ? 'bg-netteal-500/10' : 'bg-gray-500/10'}`}>
+                <div className={`w-3 h-3 rounded-full ${isSelectedDeviceActive ? 'bg-netteal-500' : 'bg-gray-500'}`}></div>
+                <span className="text-sm">
+                  {isSelectedDeviceActive ? 'This device is active' : 'This device has been inactive for more than 15 minutes'}
+                </span>
+              </div>
+            )}
+          
           
           {/* Main Tab content */}
           {renderComponent()}

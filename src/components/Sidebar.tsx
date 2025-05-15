@@ -1,5 +1,4 @@
-
-import { LayoutDashboard, NetworkIcon, Layers, CpuIcon, ScrollText, HardDrive, BrainCircuit, Terminal, Menu, X, Database, Upload, AlertCircle, BarChart } from 'lucide-react';
+import { LayoutDashboard, NetworkIcon, Layers, CpuIcon, ScrollText, HardDrive, BrainCircuit, Terminal, Menu, X, Database, Upload, AlertCircle, BarChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -20,12 +19,12 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, toggleSidebar
     { id: 'interfaces', label: 'Network Interfaces', icon: <NetworkIcon className="h-5 w-5" /> },
     { id: 'connections', label: 'Connections', icon: <Layers className="h-5 w-5" /> },
     { id: 'processes', label: 'Processes', icon: <CpuIcon className="h-5 w-5" /> },
-    { id: 'logs', label: 'System Logs', icon: <ScrollText className="h-5 w-5" /> },
+    // { id: 'logs', label: 'Device Logs', icon: <ScrollText className="h-5 w-5" /> },
     { id: 'devices', label: 'All Devices', icon: <HardDrive className="h-5 w-5" /> },
-    { id: 'jsonl-input', label: 'Submit JSONL Data', icon: <Upload className="h-5 w-5" /> },
-    { id: 'statistics', label: 'Statistics', icon: <Database className="h-5 w-5" /> },
-    { id: 'system', label: 'System', icon: <BrainCircuit className="h-5 w-5" /> },
-    { id: 'terminal', label: 'Terminal', icon: <Terminal className="h-5 w-5" /> }
+    // { id: 'jsonl-input', label: 'Submit JSONL Data', icon: <Upload className="h-5 w-5" /> },
+    { id: 'statistics', label: 'Netflow Statistics', icon: <Database className="h-5 w-5" /> },
+    { id: 'system', label: 'Device Details', icon: <BrainCircuit className="h-5 w-5" /> },
+    { id: 'terminal', label: 'Device Dashboard', icon: <Terminal className="h-5 w-5" /> }
   ];
   
   const handleTabClick = (tabId: string) => {
@@ -33,51 +32,63 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, toggleSidebar
     if (isMobile) {
       toggleSidebar();
     }
-    // Update URL hash when tab changes
     window.location.hash = tabId;
   };
 
-  if (!isOpen) {
-    return (
-      <button
-        className="fixed top-4 left-4 z-30 md:hidden"
-        onClick={toggleSidebar}
-      >
-        <Menu className="h-6 w-6 text-muted-foreground" />
-      </button>
-    );
-  }
-  
   return (
-    <div className="fixed inset-y-0 left-0 w-60 bg-card border-r border-border/40 pt-16 z-10 transition-all duration-300 transform md:translate-x-0">
-      <div className="flex justify-end p-2 md:hidden">
+    <>
+      {/* Toggle button when closed (desktop & mobile) */}
+      {!isOpen && (
         <button
+          className="fixed top-4 left-4 z-30"
           onClick={toggleSidebar}
-          className="text-muted-foreground p-2 rounded-md hover:bg-muted/40"
         >
-          <X className="h-5 w-5" />
+          <ChevronRight className="h-6 w-6 text-muted-foreground" />
         </button>
-      </div>
-      
-      <div className="px-3 py-2">
-        <div className="space-y-1">
-          {menuItems.map((item) => (
+      )}
+
+      {/* Sidebar container */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 bg-card border-r border-border/40 pt-16 z-10 transition-all duration-300 overflow-hidden",
+        isOpen ? "w-60 translate-x-0" : "-translate-x-full w-0"
+      )}>
+        <div className="flex justify-between items-center px-3 py-2">
+          {/* Collapse control */}
+          <ChevronLeft
+            className="h-5 w-5 cursor-pointer"
+            onClick={toggleSidebar}
+          />
+
+          {/* Close button for mobile */}
+          {isMobile && (
             <button
-              key={item.id}
-              onClick={() => handleTabClick(item.id)}
-              className={cn(
-                "w-full flex items-center space-x-3 px-3 py-2.5 rounded-md transition-colors",
-                activeTab === item.id 
-                  ? "bg-primary/10 text-primary shadow-sm" 
-                  : "text-foreground/70 hover:bg-muted/50 hover:text-foreground"
-              )}
+              onClick={toggleSidebar}
+              className="text-muted-foreground p-2 rounded-md hover:bg-muted/40"
             >
-              {item.icon}
-              <span className="text-sm font-medium">{item.label}</span>
+              <X className="h-5 w-5" />
             </button>
-          ))}
+          )}
+        </div>
+        <div className="px-3 py-2 overflow-y-auto h-full">
+          <div className="space-y-1">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                className={cn(
+                  "flex items-center space-x-3 w-full px-3 py-2.5 rounded-md transition-colors",
+                  activeTab === item.id
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-foreground/70 hover:bg-muted/50 hover:text-foreground"
+                )}
+              >
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

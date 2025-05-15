@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Shield, Search, AlertCircle, Filter, 
@@ -12,88 +11,87 @@ import { formatAlertTimestamp, getEventName, getSeverityLevel } from '@/services
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAlerts } from '@/hooks/useAlerts';
+import { mapField } from '@/alertMapping';
 
 export default function Alerts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
-  
   const { alerts, isLoading, error, refreshAlerts } = useAlerts();
+  console.log('Alerts:', alerts);
   
+
+  const getSeverityLevel = (code: number) => mapField('severity', code).toLowerCase();
   // Apply filters
   const filteredAlerts = alerts.filter(alert => {
-    // Apply search term
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesAttackerIp = alert.MESSAGE.attackerIp.toLowerCase().includes(searchLower);
-      const matchesDestIp = alert.MESSAGE.destinationIp.toLowerCase().includes(searchLower);
-      const matchesLogText = alert.MESSAGE.logText.toLowerCase().includes(searchLower);
-      const matchesProtocol = alert.MESSAGE.protocolType.toLowerCase().includes(searchLower);
-      
-      if (!matchesAttackerIp && !matchesDestIp && !matchesLogText && !matchesProtocol) {
-        return false;
-      }
-    }
-    
+    // map raw severity
+    const level = getSeverityLevel(alert.MESSAGE.severity);
+
     // Apply severity filter
-    if (severityFilter !== 'all') {
-      const alertSeverityLevel = getSeverityLevel(alert.MESSAGE.severity);
-      if (alertSeverityLevel !== severityFilter) {
-        return false;
-      }
+    if (severityFilter !== 'all' && level !== severityFilter) {
+      return false;
     }
-    
+
+    // Apply search term across MESSAGE fields
+    if (searchTerm) {
+      const t = searchTerm.toLowerCase();
+      return ['attackerIp','destinationIp','logText','protocolType']
+        .some(k => alert.MESSAGE[k].toLowerCase().includes(t));
+    }
+
     return true;
   });
-  
-  // Count alerts by severity
-  const severityCounts = {
-    low: alerts.filter(a => getSeverityLevel(a.MESSAGE.severity) === 'low').length,
-    medium: alerts.filter(a => getSeverityLevel(a.MESSAGE.severity) === 'medium').length,
-    high: alerts.filter(a => getSeverityLevel(a.MESSAGE.severity) === 'high').length,
-    critical: alerts.filter(a => getSeverityLevel(a.MESSAGE.severity) === 'critical').length,
-  };
 
-  const renderSeverityBadge = (severity: number) => {
-    const level = getSeverityLevel(severity);
-    
-    if (level === 'low') {
-      return <Badge variant="outline" className="bg-netteal-500/10 text-netteal-400 border-netteal-500/20">Low</Badge>;
-    } else if (level === 'medium') {
-      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Medium</Badge>;
-    } else if (level === 'high') {
-      return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">High</Badge>;
-    } else {
-      return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Critical</Badge>;
+  // Count alerts by severity
+  const severityKeys = ['low_risk','medium_risk','high_risk','critical','warning','alert','emergency'];
+  const severityCounts = severityKeys.reduce((acc, key) => ({
+    ...acc,
+    [key]: alerts.filter(a => getSeverityLevel(a.MESSAGE.severity) === key).length,
+  }), {} as Record<string, number>);
+
+  const renderSeverityBadge = (code: number) => {
+    const level = getSeverityLevel(code);
+
+    switch (level) {
+      case 'low_risk':
+        return <Badge>Low Risk</Badge>;
+      case 'medium_risk':
+        return <Badge>Medium Risk</Badge>;
+      case 'high_risk':
+        return <Badge>High Risk</Badge>;
+      case 'critical':
+        return <Badge>Critical</Badge>;
+      case 'warning':
+        return <Badge>Warning</Badge>;
+      case 'alert':
+        return <Badge variant="destructive">Alert</Badge>;
+      case 'emergency':
+        return <Badge variant="destructive">Emergency</Badge>;
+      default:
+        return <Badge>{level}</Badge>;
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center">
-          <Shield className="h-12 w-12 animate-pulse text-netblue-400 mb-4" />
-          <p className="text-muted-foreground">Loading alert data...</p>
-        </div>
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-96">
+      <div className="flex flex-col items-center">
+        <Shield className="h-12 w-12 animate-pulse text-netblue-400 mb-4" />
+        <p className="text-muted-foreground">Loading alert data...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center text-center max-w-md">
-          <div className="bg-destructive/10 p-6 rounded-full mb-4">
-            <AlertCircle className="h-10 w-10 text-destructive" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">Error Loading Alerts</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={refreshAlerts}>
-            Try Again
-          </Button>
+  if (error) return (
+    <div className="flex items-center justify-center h-96">
+      <div className="flex flex-col items-center text-center max-w-md">
+        <div className="bg-destructive/10 p-6 rounded-full mb-4">
+          <AlertCircle className="h-10 w-10 text-destructive" />
         </div>
+        <h3 className="text-xl font-semibold mb-2">Error Loading Alerts</h3>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={refreshAlerts}>Try Again</Button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -127,7 +125,7 @@ export default function Alerts() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">High Severity</p>
-                <p className="text-2xl font-bold">{severityCounts.high}</p>
+                <p className="text-2xl font-bold">{severityCounts.high_risk}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-orange-500" />
             </div>
@@ -139,7 +137,7 @@ export default function Alerts() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Medium/Low</p>
-                <p className="text-2xl font-bold">{severityCounts.medium + severityCounts.low}</p>
+                <p className="text-2xl font-bold">{severityCounts.medium_risk + severityCounts.low_risk}</p>
               </div>
               <Wifi className="h-8 w-8 text-netteal-400" />
             </div>
